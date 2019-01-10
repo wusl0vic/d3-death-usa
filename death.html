@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+  <script src="../web_modules/d3/dist/d3.js"></script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <style type="text/css">
+    body {
+      width: 100vw;
+      margin: 25px auto;
+      font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+      background: ghostwhite;
+    }
+
+    path {
+      fill-opacity: 0.8;
+    }
+
+    .selected,
+    path:hover {
+      fill-opacity: 1;
+    }
+
+    .axis {
+      font-size: smaller;
+    }
+
+    main {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+    }
+
+    h3 {
+      text-align: center;
+    }
+
+    .line {
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+  </style>
+  <title>Leading Causes of Death in the United States</title>
+</head>
+
+<body>
+  <h1>Leading Causes of Death in the United States</h1>
+
+  <div>
+    <label for="year"><strong>Year:</strong></label>
+    <select id="year">
+      <option value="" selected>All Time</option>
+      <option value="2016">2016</option>
+      <option value="2015">2015</option>
+      <option value="2014">2014</option>
+      <option value="2013">2013</option>
+      <option value="2012">2012</option>
+      <option value="2011">2011</option>
+      <option value="2010">2010</option>
+      <option value="2009">2009</option>
+      <option value="2008">2008</option>
+      <option value="2007">2007</option>
+      <option value="2006">2006</option>
+      <option value="2005">2005</option>
+      <option value="2004">2004</option>
+      <option value="2003">2003</option>
+      <option value="2002">2002</option>
+      <option value="2001">2001</option>
+      <option value="2000">2000</option>
+      <option value="1999">1999</option>
+    </select>
+    <strong>Selected Cause: </strong>
+    <span id="selectedCause"></span>
+
+  </div>
+
+  <main>
+    <section>
+      <h3>Distribution of Causes</h3>
+      <svg id="causes"></svg>
+    </section>
+    <section id="trend-sec">
+      <h3>Death rate over time</h3>
+      <svg id="death-trend"></svg>
+    </section>
+  </main>
+
+  <script type="text/javascript">
+
+    const state = {
+      data: [],
+      year: "",
+      selectedCause: null
+    };
+
+    
+    
+    function createHistogram(svgSelector) {
+      const margin = {
+        top: 40,
+        bottom: 10,
+        left: 120,
+        right: 20
+      };
+      const width = 600 - margin.left - margin.right;
+      const height = 400 - margin.top - margin.bottom;
+
+      // Creates sources <svg> element
+      const svg = d3.select(svgSelector)
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom);
+
+      // Group used to enforce margin
+      const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+
+      // Scales setup
+      const xscale = d3.scaleLinear().range([0, width]);
+      const yscale = d3.scaleLinear().range([0, height]);
+
+      // Axis setup
+      const xaxis = d3.axisTop().scale(xscale);
+      const g_xaxis = g.append('g').attr('class', 'x axis');
+      const yaxis = d3.axisLeft().scale(yscale);
+      const g_yaxis = g.append('g').attr('class', 'y axis');
+
+      
+      function update(new_data) { //: (IPerson[] & {x0: number, x1: number})[]
+        //update the scales
+        xscale.domain([0, d3.max(new_data, (d) => d.length)]);
+        yscale.domain([new_data[0].x0, new_data[new_data.length - 1].x1]);
+        //render the axis
+        g_xaxis.transition().call(xaxis);
+        g_yaxis.transition().call(yaxis);
+
+
+        // Render the chart with new data
+
+        // DATA JOIN
+        const rect = g.selectAll('rect').data(new_data);
+
+        // ENTER
+        // new elements
+        const rect_enter = rect.enter().append('rect')
+          .attr('x', 0) //set intelligent default values for animation
+          .attr('y', 0)
+          .attr('width', 0)
+          .attr('height', 0);
+        rect_enter.append('title');
+
+        // ENTER + UPDATE
+        // both old and new elements
+        rect.merge(rect_enter).transition()
+          .attr('height', (d) => yscale(d.x1) - yscale(d.x0) - 2)
+          .attr('width', (d) => xscale(d.length))
+          .attr('y', (d) => yscale(d.x0) + 1);
+
+        rect.merge(rect_enter).select('title').text((d) => `${d.x0}: ${d.length}`);
+
+        // EXIT
+        // elements that aren't associated with data
+        rect.exit().remove();
+      }
+
+      return update;
+    }
+
+    function createPieChart(svgSelector, stateAttr, colorScheme) {
+      const margin = 10;
+      const radius = 200;
+
+      // Creates sources <svg> element
+      const svg = d3.select(svgSelector)
+        .attr('width', radius * 2 + margin * 2)
+        .attr('height', radius * 2 + margin * 2);
+
+      // Group used to enforce margin
+      const g = svg.append('g')
+        .attr('transform', `translate(${radius + margin},${radius + margin})`);
+
+      const pie = d3.pie().value((d) => d.rate).sortValues(null).sort(null);
+      const arc = d3.arc().outerRadius(radius).innerRadius(0);
+
+      const cscale = d3.scaleOrdinal(colorScheme);
+      
+      function update(new_data) { //{key: string, values: IPerson[]}[]
+        const pied = pie(new_data);
+        // Render the chart with new data
+
+        cscale.domain(new_data.map((d) => d.key));
+
+        // DATA JOIN
+        const old = g.selectAll('path').data();
+        const path = g.selectAll('path').data(pied, (d) => d.data.key);
+
+        // ENTER
+        // new elements
+        const path_enter = path.enter().append('path');
+        path_enter.on('click', (d) => {
+            if (state.selectedCause === d.data.key) {
+              state.selectedCause = null;
+            } else {
+              state.selectedCause = d.data.key;
+            }
+            updateApp();
+          });
+        path_enter.append('title');
+
+        function tweenArc(d, i) {
+          const interpolate = d3.interpolateObject(old[i], d);
+          return (t) => arc(interpolate(t));
+        }
+
+        // ENTER + UPDATE
+        // both old and new elements
+        path.merge(path_enter)
+          .classed('selected', (d) => d.data.key === state[stateAttr])
+          .transition()
+            .attrTween('d', tweenArc)
+            .style('fill', (d) => cscale(d.data.key));
+
+        path.merge(path_enter).select('title').text((d) => `${d.data.key}: ${d.data.rate}`);
+
+        // EXIT
+        // elements that aren't associated with data
+        path.exit()
+          .transition()
+          .attrTween('d', tweenArc)
+          .remove();
+      }
+
+      return update;
+    }
+
+    function createLineChart(svgSelector, colorScheme) {
+      const margin = 60;
+      const width = 600;
+      const height = 400;
+
+      const svg = d3.select(svgSelector)
+        .attr('width', width + margin)
+        .attr('height', height + margin);
+      
+      const g = svg.append('g')
+        .attr('transform', `translate(${margin},${margin})`);
+      
+      // Scales setup
+      const xscale = d3.scaleTime().range([0, width-margin]);
+      const yscale = d3.scaleLinear().range([height-margin, 0]);
+
+      // Axis setup
+      const xaxis = d3.axisBottom().scale(xscale);
+      const g_xaxis = g.append('g').attr('class', 'x axis').attr('transform', `translate(0, ${height-margin})`);
+      const yaxis = d3.axisLeft().scale(yscale).ticks(8);
+      const g_yaxis = g.append('g').attr('class', 'y axis');
+
+      const color = d3.scaleOrdinal(colorScheme);
+
+      const line = d3.line()
+          .x(d => xscale(d.year))
+          .y(d => yscale(d.rate));
+      
+      const lines = svg.append('g')
+        .attr('class', 'lines')
+        .attr('transform', `translate(${margin},${margin})`);
+
+      function update(new_data) {
+        const all_rates = new_data.map(d => d.values).reduce((acc, val) => [...acc, ...val]).map(v => v.rate);
+        xscale.domain(d3.extent(new_data[0].values, d => d.year));
+        yscale.domain(d3.extent(all_rates));
+
+        g_xaxis.transition().call(xaxis);
+        g_yaxis.transition().call(yaxis);
+
+        const path = lines.selectAll('.line-group').data(new_data);
+
+        const line_enter = path.enter().append('g')
+            .attr('class', 'line-group')
+            .on('mouseover', (d, i) => {
+              svg.append('text')
+                .attr('class', 'title-text')
+                .style('fill', color(i))
+                .text(d.name)
+                .attr("text-anchor", "middle")
+                .attr("x", (width-margin)/2)
+                .attr("y", 15);
+            })
+            .on('mouseout', d => svg.select('.title-text').remove())
+            .append('path')
+            .attr('class', 'line')
+            .attr('d', d => line(d.values))
+            .style('stroke', (d, i) => color(i));
+        
+        // TODO: add circles with tooltip or smth on hover, ...
+        // const circles = lines.selectAll('circle-group').data(new_data);
+        // const circle_enter = circles.enter().append('g')
+        //     .style('fill', (d,i) => color(i))
+        //     .selectAll('circle')
+        //     .data(d => d.values);
+        // const circle_enter_enter = circle_enter.enter()
+        //     .append('g')
+        //     .attr('class', 'circle')
+        //     .append('circle')
+        //     .attr('cx', d => xscale(d.year))
+        //     .attr('cy', d => yscale(d.rate))
+        //     .attr('r', 3)
+        //     .style('opacity', 0.85);
+
+        line_enter.on('click', (d) => {
+            svg.select('.title-text').remove();
+            if (state.selectedCause === d.name) {
+              state.selectedCause = null;
+            } else {
+              state.selectedCause = d.name;
+            }
+            updateApp();
+          });
+
+        path.merge(line_enter).transition()
+          .select('path')
+          .attr('d', d => line(d.values))
+          .attr('stroke', (d,i) => color(i));
+
+        // circles.merge(circle_enter_enter).transition()
+        //   .select('circle')
+        //   .attr('cx', d => xscale(d.year))
+        //   .attr('cy', d => yscale(d.rate))
+        //   .attr('r', 3);
+
+        path.exit().remove();
+        // circles.exit().remove();
+      }
+
+      return update;
+    }
+
+    /////////////////////////
+    const causePieChart = createPieChart('#causes', 'selectedCause', d3.schemeCategory10)
+    const trendLineChart = createLineChart('#death-trend', d3.schemeCategory10);
+
+    function filterData() {
+        return state.data.filter(d => {
+            if (state.year && d.year !== state.year) {
+                return false;
+            }
+            if (state.selectedCause && d.cause_name !== state.selectedCause) {
+              return false;
+            }
+            return true;
+        });
+    }
+
+    function wrangleData_(filtered) {
+      const ageHistogram = d3.histogram()
+        .domain([0, 100])
+        .thresholds(10)
+        .value((d) => d.age);
+
+      const ageHistogramData = ageHistogram(filtered);
+
+      // always the two categories
+      const sexPieData = ['female', 'male'].map((key) => ({
+        key,
+        values: filtered.filter((d) => d.sex === key)
+      }));
+
+      const fareHistogram = d3.histogram()
+        .domain([0, d3.max(filtered, (d) => d.fare)])
+        .value((d) => d.fare);
+
+      const fareHistogramData = fareHistogram(filtered);
+
+      // always the two categories
+      const survivedPieData = ['0', '1'].map((key) => ({
+        key,
+        values: filtered.filter((d) => d.survived === key)
+      }));
+
+      return {ageHistogramData, sexPieData, fareHistogramData, survivedPieData};
+    }
+
+    function wrangleData(filtered) {
+        filtered = filtered.filter(d => d.cause_name !== "All causes")
+        const causePieData = [...new Set(filtered.map(row => row.cause_name))].map(key => {
+          const tmp = filtered.filter(d => d.cause_name === key)
+          return {
+            key,
+            // average age-adjusted death rate for all states
+            rate: tmp.reduce((acc, d) => acc + d.rate, 0) / tmp.length
+          };
+        });
+
+        // console.log(causePieData);
+        causePieData.sort((a, b) => b.rate - a.rate);
+
+        const parseDate = d3.timeParse("%Y");
+
+        let trendData = filtered.filter(d => d.state === 'United States')
+          .reduce((grp, item) => {
+            const val = item['cause_name'];
+            grp[val] = grp[val] || {name: val, values: []};
+            grp[val].values.push({year: item['year'], rate: item['rate']});
+            return grp;
+          }, []);
+        // console.log(trendLineChartData);
+
+        const trendLineChartData = Object.keys(trendData).map(key => trendData[key]);
+        trendLineChartData.forEach(d => {
+          d.values.forEach(v => {
+            v.year = parseDate(v.year);
+          });
+        });
+
+        trendLineChartData.sort((a, b) => Math.max(...b.values.map(d => d.rate)) - Math.max(...a.values.map(d => d.rate)))
+
+        return {causePieData, trendLineChartData};
+    }
+
+    function updateApp() {
+        const filtered = filterData();
+        const {causePieData, trendLineChartData} = wrangleData(filtered);
+        causePieChart(causePieData);
+        trendLineChart(trendLineChartData);
+
+        d3.select('#selectedCause').text(state.selectedCause || 'All');
+    }
+
+    const parseDate = d3.timeParse("%Y");
+    d3.csv('death.csv').then(parsed => {
+        state.data = parsed.map(row => {
+            row.deaths = parseInt(row.deaths, 10);
+            row.rate = parseFloat(row.rate);
+            return row;
+        });
+
+        updateApp();
+    });
+
+    //interactivity
+    d3.select('#year').on('change', function () {
+      const selected = d3.select(this).property('value');
+      state.year = selected;
+      updateApp();
+    });
+
+  </script>
+</body>
+
+</html>
