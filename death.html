@@ -223,7 +223,7 @@
             .attrTween('d', tweenArc)
             .style('fill', (d) => cscale(d.data.key));
 
-        path.merge(path_enter).select('title').text((d) => `${d.data.key}: ${d.data.rate}`);
+        path.merge(path_enter).select('title').text((d) => `${d.data.key}: ${d.data.rate.toFixed(2)}`);
 
         // EXIT
         // elements that aren't associated with data
