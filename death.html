@@ -295,20 +295,34 @@
             .attr('d', d => line(d.values))
             .style('stroke', (d, i) => color(i));
         
-        // TODO: add circles with tooltip or smth on hover, ...
-        // const circles = lines.selectAll('circle-group').data(new_data);
-        // const circle_enter = circles.enter().append('g')
-        //     .style('fill', (d,i) => color(i))
-        //     .selectAll('circle')
-        //     .data(d => d.values);
-        // const circle_enter_enter = circle_enter.enter()
-        //     .append('g')
-        //     .attr('class', 'circle')
-        //     .append('circle')
+        // {// TODO: fix circle fuckup
+        //   const circles = lines.selectAll('.circle-group').data(new_data);
+        //   const circles_enter = circles.enter().append('g').attr('class', 'circle-group');
+        //   circles_enter.style('fill', (d,i) => color(i));
+
+        //   circles.merge(circles_enter)
+        //     .select('g')
+        //     .style('fill', (d,i) => color(i));
+
+        //   const circle = circles_enter.selectAll('circle').data(d => d.values);
+        //   const circle_enter = circle.enter().append('g');
+
+        //   // circle.exit().remove();
+
+        //   circle_enter.attr('class', 'circle')
+        //       .append('circle')
+        //       .attr('cx', d => xscale(d.year))
+        //       .attr('cy', d => yscale(d.rate))
+        //       .attr('r', 3)
+        //       .style('opacity', 0.85);
+
+        //   circle.merge(circle_enter)
+        //     .select('circle')
         //     .attr('cx', d => xscale(d.year))
-        //     .attr('cy', d => yscale(d.rate))
-        //     .attr('r', 3)
-        //     .style('opacity', 0.85);
+        //     .attr('cy', d => yscale(d.rate));
+          
+        //   circles.exit().remove();
+        // }
 
         line_enter.on('click', (d) => {
             svg.select('.title-text').remove();
@@ -324,15 +338,8 @@
           .select('path')
           .attr('d', d => line(d.values))
           .attr('stroke', (d,i) => color(i));
-
-        // circles.merge(circle_enter_enter).transition()
-        //   .select('circle')
-        //   .attr('cx', d => xscale(d.year))
-        //   .attr('cy', d => yscale(d.rate))
-        //   .attr('r', 3);
-
+        
         path.exit().remove();
-        // circles.exit().remove();
       }
 
       return update;
@@ -426,7 +433,7 @@
         causePieChart(causePieData);
         trendLineChart(trendLineChartData);
 
-        d3.select('#selectedCause').text(state.selectedCause || 'All');
+        d3.select('#selectedCause').text(state.selectedCause || 'All Causes');
     }
 
     const parseDate = d3.timeParse("%Y");
