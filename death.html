@@ -108,79 +108,6 @@
       selectedState: 'United States'
     };
 
-    
-    
-    function createHistogram(svgSelector) {
-      const margin = {
-        top: 40,
-        bottom: 10,
-        left: 120,
-        right: 20
-      };
-      const width = 600 - margin.left - margin.right;
-      const height = 400 - margin.top - margin.bottom;
-
-      // Creates sources <svg> element
-      const svg = d3.select(svgSelector)
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom);
-
-      // Group used to enforce margin
-      const g = svg.append('g')
-        .attr('transform', `translate(${margin.left},${margin.top})`);
-
-
-      // Scales setup
-      const xscale = d3.scaleLinear().range([0, width]);
-      const yscale = d3.scaleLinear().range([0, height]);
-
-      // Axis setup
-      const xaxis = d3.axisTop().scale(xscale);
-      const g_xaxis = g.append('g').attr('class', 'x axis');
-      const yaxis = d3.axisLeft().scale(yscale);
-      const g_yaxis = g.append('g').attr('class', 'y axis');
-
-      
-      function update(new_data) { //: (IPerson[] & {x0: number, x1: number})[]
-        //update the scales
-        xscale.domain([0, d3.max(new_data, (d) => d.length)]);
-        yscale.domain([new_data[0].x0, new_data[new_data.length - 1].x1]);
-        //render the axis
-        g_xaxis.transition().call(xaxis);
-        g_yaxis.transition().call(yaxis);
-
-
-        // Render the chart with new data
-
-        // DATA JOIN
-        const rect = g.selectAll('rect').data(new_data);
-
-        // ENTER
-        // new elements
-        const rect_enter = rect.enter().append('rect')
-          .attr('x', 0) //set intelligent default values for animation
-          .attr('y', 0)
-          .attr('width', 0)
-          .attr('height', 0);
-        rect_enter.append('title');
-
-        // ENTER + UPDATE
-        // both old and new elements
-        rect.merge(rect_enter).transition()
-          .attr('height', (d) => yscale(d.x1) - yscale(d.x0) - 2)
-          .attr('width', (d) => xscale(d.length))
-          .attr('y', (d) => yscale(d.x0) + 1);
-
-        rect.merge(rect_enter).select('title').text((d) => `${d.x0}: ${d.length}`);
-
-        // EXIT
-        // elements that aren't associated with data
-        rect.exit().remove();
-      }
-
-      return update;
-    }
-
     function createPieChart(svgSelector, stateAttr, colorScheme) {
       const margin = 10;
       const radius = 200;
@@ -199,9 +126,8 @@
 
       const cscale = d3.scaleOrdinal(colorScheme);
       
-      function update(new_data) { //{key: string, values: IPerson[]}[]
+      function update(new_data) { 
         const pied = pie(new_data);
-        // Render the chart with new data
 
         cscale.domain(new_data.map((d) => d.key));
 
@@ -306,35 +232,6 @@
             .attr('class', 'line')
             .attr('d', d => line(d.values))
             .style('stroke', (d, i) => color(i));
-        
-        // {// TODO: fix circle fuckup
-        //   const circles = lines.selectAll('.circle-group').data(new_data);
-        //   const circles_enter = circles.enter().append('g').attr('class', 'circle-group');
-        //   circles_enter.style('fill', (d,i) => color(i));
-
-        //   circles.merge(circles_enter)
-        //     .select('g')
-        //     .style('fill', (d,i) => color(i));
-
-        //   const circle = circles_enter.selectAll('circle').data(d => d.values);
-        //   const circle_enter = circle.enter().append('g');
-
-        //   // circle.exit().remove();
-
-        //   circle_enter.attr('class', 'circle')
-        //       .append('circle')
-        //       .attr('cx', d => xscale(d.year))
-        //       .attr('cy', d => yscale(d.rate))
-        //       .attr('r', 3)
-        //       .style('opacity', 0.85);
-
-        //   circle.merge(circle_enter)
-        //     .select('circle')
-        //     .attr('cx', d => xscale(d.year))
-        //     .attr('cy', d => yscale(d.rate));
-          
-        //   circles.exit().remove();
-        // }
 
         line_enter.on('click', (d) => {
             svg.select('.title-text').remove();
@@ -374,35 +271,6 @@
             }
             return true;
         });
-    }
-
-    function wrangleData_(filtered) {
-      const ageHistogram = d3.histogram()
-        .domain([0, 100])
-        .thresholds(10)
-        .value((d) => d.age);
-
-      const ageHistogramData = ageHistogram(filtered);
-
-      // always the two categories
-      const sexPieData = ['female', 'male'].map((key) => ({
-        key,
-        values: filtered.filter((d) => d.sex === key)
-      }));
-
-      const fareHistogram = d3.histogram()
-        .domain([0, d3.max(filtered, (d) => d.fare)])
-        .value((d) => d.fare);
-
-      const fareHistogramData = fareHistogram(filtered);
-
-      // always the two categories
-      const survivedPieData = ['0', '1'].map((key) => ({
-        key,
-        values: filtered.filter((d) => d.survived === key)
-      }));
-
-      return {ageHistogramData, sexPieData, fareHistogramData, survivedPieData};
     }
 
     function wrangleData(filtered) {
@@ -451,14 +319,12 @@
         d3.select('#selectedCause').text(state.selectedCause || 'All Causes');
     }
 
-    const parseDate = d3.timeParse("%Y");
     d3.csv('death.csv').then(parsed => {
         state.data = parsed.map(row => {
             row.deaths = parseInt(row.deaths, 10);
             row.rate = parseFloat(row.rate);
             return row;
         });
-
         updateApp();
     });
 
