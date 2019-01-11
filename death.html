@@ -75,6 +75,17 @@
     <strong>Selected Cause: </strong>
     <span id="selectedCause"></span>
 
+    <!-- For demonstration, state selection should be done via map -->
+    <label for="state"><strong>State:</strong></label>
+    <select id="state">
+      <option value="United States" selected>All States</option>
+      <option value="Hawaii">Hawaii</option>
+      <option value="Florida">Florida</option>
+      <option value="California">California</option>
+      <option value="Alaska">Alaska</option>
+    </select>
+    <strong>Selected Cause: </strong>
+    <span id="selectedCause"></span>
   </div>
 
   <main>
@@ -93,7 +104,8 @@
     const state = {
       data: [],
       year: "",
-      selectedCause: null
+      selectedCause: null,
+      selectedState: 'United States'
     };
 
     
@@ -357,6 +369,9 @@
             if (state.selectedCause && d.cause_name !== state.selectedCause) {
               return false;
             }
+            if (state.selectedState && d.state !== state.selectedState) {
+              return false;
+            }
             return true;
         });
     }
@@ -406,7 +421,7 @@
 
         const parseDate = d3.timeParse("%Y");
 
-        let trendData = filtered.filter(d => d.state === 'United States')
+        let trendData = filtered.filter(d => d.state === state.selectedState)
           .reduce((grp, item) => {
             const val = item['cause_name'];
             grp[val] = grp[val] || {name: val, values: []};
@@ -451,6 +466,12 @@
     d3.select('#year').on('change', function () {
       const selected = d3.select(this).property('value');
       state.year = selected;
+      updateApp();
+    });
+
+    d3.select('#state').on('change', function () {
+      const selected = d3.select(this).property('value');
+      state.selectedState = selected;
       updateApp();
     });
 
