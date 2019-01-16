@@ -101,7 +101,8 @@
       selectedState: "United States",
       data: [],
       year: "",
-      selectedCause: null
+      selectedCause: null,
+      selectedState: 'United States'
     };
     
     // STATES-------------------------------------------------------------------------------
@@ -175,6 +176,10 @@
         updateApp();
       }
       else {
+        d3.select(id).selectAll(".state")
+        .data(uStatePaths)
+        .filter(s => s.n == state.selectedState)
+        .style("fill", function(d) { return data[d.id].color; });
         state.selectedState = d.n;
 			  updateApp();
       }
@@ -314,9 +319,8 @@
 
       const cscale = d3.scaleOrdinal(colorScheme);
       
-      function update(new_data) { //{key: string, values: IPerson[]}[]
+      function update(new_data) { 
         const pied = pie(new_data);
-        // Render the chart with new data
 
         cscale.domain(new_data.map((d) => d.key));
 
@@ -350,7 +354,7 @@
             .attrTween('d', tweenArc)
             .style('fill', (d) => cscale(d.data.key));
 
-        path.merge(path_enter).select('title').text((d) => `${d.data.key}: ${d.data.rate}`);
+        path.merge(path_enter).select('title').text((d) => `${d.data.key}: ${d.data.rate.toFixed(2)}`);
 
         // EXIT
         // elements that aren't associated with data
@@ -421,21 +425,6 @@
             .attr('class', 'line')
             .attr('d', d => line(d.values))
             .style('stroke', (d, i) => color(i));
-        
-        // TODO: add circles with tooltip or smth on hover, ...
-        // const circles = lines.selectAll('circle-group').data(new_data);
-        // const circle_enter = circles.enter().append('g')
-        //     .style('fill', (d,i) => color(i))
-        //     .selectAll('circle')
-        //     .data(d => d.values);
-        // const circle_enter_enter = circle_enter.enter()
-        //     .append('g')
-        //     .attr('class', 'circle')
-        //     .append('circle')
-        //     .attr('cx', d => xscale(d.year))
-        //     .attr('cy', d => yscale(d.rate))
-        //     .attr('r', 3)
-        //     .style('opacity', 0.85);
 
         line_enter.on('click', (d) => {
             svg.select('.title-text').remove();
@@ -451,15 +440,8 @@
           .select('path')
           .attr('d', d => line(d.values))
           .attr('stroke', (d,i) => color(i));
-
-        // circles.merge(circle_enter_enter).transition()
-        //   .select('circle')
-        //   .attr('cx', d => xscale(d.year))
-        //   .attr('cy', d => yscale(d.rate))
-        //   .attr('r', 3);
-
+        
         path.exit().remove();
-        // circles.exit().remove();
       }
 
       return update;
@@ -480,37 +462,11 @@
             if (state.selectedCause && d.cause_name !== state.selectedCause) {
               return false;
             }
+            if (state.selectedState && d.state !== state.selectedState) {
+              return false;
+            }
             return true;
         });
-    }
-
-    function wrangleData_(filtered) {
-      const ageHistogram = d3.histogram()
-        .domain([0, 100])
-        .thresholds(10)
-        .value((d) => d.age);
-
-      const ageHistogramData = ageHistogram(filtered);
-
-      // always the two categories
-      const sexPieData = ['female', 'male'].map((key) => ({
-        key,
-        values: filtered.filter((d) => d.sex === key)
-      }));
-
-      const fareHistogram = d3.histogram()
-        .domain([0, d3.max(filtered, (d) => d.fare)])
-        .value((d) => d.fare);
-
-      const fareHistogramData = fareHistogram(filtered);
-
-      // always the two categories
-      const survivedPieData = ['0', '1'].map((key) => ({
-        key,
-        values: filtered.filter((d) => d.survived === key)
-      }));
-
-      return {ageHistogramData, sexPieData, fareHistogramData, survivedPieData};
     }
 
     function wrangleData(filtered) {
@@ -556,19 +512,17 @@
         causePieChart(causePieData);
         trendLineChart(trendLineChartData);
 
-        d3.select('#selectedCause').text(state.selectedCause || 'All');
         d3.select('#selectedState').text(state.selectedState || 'All');
 
+        d3.select('#selectedCause').text(state.selectedCause || 'All Causes');
     }
 
-    const parseDate = d3.timeParse("%Y");
     d3.csv('death.csv').then(parsed => {
         state.data = parsed.map(row => {
             row.deaths = parseInt(row.deaths, 10);
             row.rate = parseFloat(row.rate);
             return row;
         });
-
         updateApp();
     });
 
@@ -576,6 +530,12 @@
     d3.select('#year').on('change', function () {
       const selected = d3.select(this).property('value');
       state.year = selected;
+      updateApp();
+    });
+
+    d3.select('#state').on('change', function () {
+      const selected = d3.select(this).property('value');
+      state.selectedState = selected;
       updateApp();
     });
 
