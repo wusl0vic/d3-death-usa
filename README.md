@@ -2,6 +2,10 @@
 
 Dominik Reitberger, Michael Öller
 
+## Build/Run
+
+Clone the repository and open `death.html` in a web server (i.e. using the Live Server Plugin in VS Code or similar plugins for Atom, Sublime, etc.)
+
 ## Dataset
 
 The dataset we visualise in this project consists of the leading causes of death in the United States from 1999 - 2016.
@@ -18,7 +22,7 @@ It contains 10296 items with the following attributes:
 
 ## Questions
 
-Questions we came up with are i.e.:
+Questions we came up with are i.e. :
 
 * What is the main cause of death?
 * How do death rates change over the years?
