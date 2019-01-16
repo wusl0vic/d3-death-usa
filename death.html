@@ -91,7 +91,6 @@
       <h3>States</h3>
       <div id="tooltip"></div><!-- div to hold tooltip. -->
       <svg width="960" height="600" id="statesvg"></svg> <!-- svg to hold the map. -->
-      <script src="uStates.js"></script> <!-- creates uStates. -->
     </section>
   </main>
 
@@ -230,77 +229,7 @@
     d3.select(self.frameElement).style("height", "600px"); 
     
     // END STATES---------------------------------------------------------------------------------------------
-    function createHistogram(svgSelector) {
-      const margin = {
-        top: 40,
-        bottom: 10,
-        left: 120,
-        right: 20
-      };
-      const width = 600 - margin.left - margin.right;
-      const height = 400 - margin.top - margin.bottom;
-
-      // Creates sources <svg> element
-      const svg = d3.select(svgSelector)
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom);
-
-      // Group used to enforce margin
-      const g = svg.append('g')
-        .attr('transform', `translate(${margin.left},${margin.top})`);
-
-
-      // Scales setup
-      const xscale = d3.scaleLinear().range([0, width]);
-      const yscale = d3.scaleLinear().range([0, height]);
-
-      // Axis setup
-      const xaxis = d3.axisTop().scale(xscale);
-      const g_xaxis = g.append('g').attr('class', 'x axis');
-      const yaxis = d3.axisLeft().scale(yscale);
-      const g_yaxis = g.append('g').attr('class', 'y axis');
-
-      
-      function update(new_data) { //: (IPerson[] & {x0: number, x1: number})[]
-        //update the scales
-        xscale.domain([0, d3.max(new_data, (d) => d.length)]);
-        yscale.domain([new_data[0].x0, new_data[new_data.length - 1].x1]);
-        //render the axis
-        g_xaxis.transition().call(xaxis);
-        g_yaxis.transition().call(yaxis);
-
-
-        // Render the chart with new data
-
-        // DATA JOIN
-        const rect = g.selectAll('rect').data(new_data);
-
-        // ENTER
-        // new elements
-        const rect_enter = rect.enter().append('rect')
-          .attr('x', 0) //set intelligent default values for animation
-          .attr('y', 0)
-          .attr('width', 0)
-          .attr('height', 0);
-        rect_enter.append('title');
-
-        // ENTER + UPDATE
-        // both old and new elements
-        rect.merge(rect_enter).transition()
-          .attr('height', (d) => yscale(d.x1) - yscale(d.x0) - 2)
-          .attr('width', (d) => xscale(d.length))
-          .attr('y', (d) => yscale(d.x0) + 1);
-
-        rect.merge(rect_enter).select('title').text((d) => `${d.x0}: ${d.length}`);
-
-        // EXIT
-        // elements that aren't associated with data
-        rect.exit().remove();
-      }
-
-      return update;
-    }
-
+    
     function createPieChart(svgSelector, stateAttr, colorScheme) {
       const margin = 10;
       const radius = 200;
@@ -480,7 +409,6 @@
           };
         });
 
-        // console.log(causePieData);
         causePieData.sort((a, b) => b.rate - a.rate);
 
         const parseDate = d3.timeParse("%Y");
@@ -492,7 +420,6 @@
             grp[val].values.push({year: item['year'], rate: item['rate']});
             return grp;
           }, []);
-        // console.log(trendLineChartData);
 
         const trendLineChartData = Object.keys(trendData).map(key => trendData[key]);
         trendLineChartData.forEach(d => {
